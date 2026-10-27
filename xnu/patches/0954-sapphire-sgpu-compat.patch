@@ -7,8 +7,8 @@ Publish the same user client class on IOAcceleratorES for SapphireMetal discover
 
 This is an experimental direct-Metal path; EAGL/freedreno remains the default GPU route.
 
---- a/xnu/iokit/Kernel/arm/RedwoodGPU.cpp
-+++ b/xnu/iokit/Kernel/arm/RedwoodGPU.cpp
+--- a/iokit/Kernel/arm/RedwoodGPU.cpp
++++ b/iokit/Kernel/arm/RedwoodGPU.cpp
 @@ -434,6 +434,7 @@
  	IOReturn gemInfo(struct msm_gem_info * request);
  	IOReturn submit(struct msm_gem_submit * request);
@@ -121,8 +121,8 @@ This is an experimental direct-Metal path; EAGL/freedreno remains the default GP
  
  	if (args->structureInput == NULL || size > sizeof(r) || fBuffers == NULL) {
  		return kIOReturnBadArgument;
---- a/xnu/iokit/Kernel/arm/SweetFramebuffer.cpp
-+++ b/xnu/iokit/Kernel/arm/SweetFramebuffer.cpp
+--- a/iokit/Kernel/arm/SweetFramebuffer.cpp
++++ b/iokit/Kernel/arm/SweetFramebuffer.cpp
 @@ -392,6 +392,7 @@
  	IOAcceleratorES *accel = accelOn ? OSTypeAlloc(IOAcceleratorES) : NULL;
  	if (accel != NULL && accel->init()) {

@@ -50,9 +50,8 @@ retain their own upstream notices. The original design notes are in
    reuses our existing buffer, cache, SMMU and fence machinery instead of
    importing Sapphire's separate `SapphireGpuClient`. Its fixed-VA support is
    deliberately limited to the self-test's initial `0x01000000` allocation;
-   a busy GPU address space can reject that request. Patch 0954 has passed a
-   dry-apply against the successful 0953 build source, but has not yet had a
-   kernel build or device runtime test. Keep the optional Metal bundle disabled
+   a busy GPU address space can reject that request. Patch 0954 needs a CI rebuild after correcting its XNU-relative paths; the
+   first CI attempt skipped it. It has no device runtime test. Keep the optional Metal bundle disabled
    until those checks pass. The `sweetgl=1` EAGL/Mesa route does not depend on
    this experimental ABI.
 5. AIR/Metal compilation is research code. It is included to preserve the
