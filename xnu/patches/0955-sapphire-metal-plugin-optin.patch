@@ -1,0 +1,24 @@
+From: Sapphiren integration <local>
+Subject: [PATCH] sapphiren: opt-in Sapphire Metal plugin discovery
+
+Expose SapphireMetal only with sweetmetal=1. EAGL remains the default path.
+
+--- a/iokit/Kernel/arm/SweetFramebuffer.cpp
++++ b/iokit/Kernel/arm/SweetFramebuffer.cpp
+@@ -393,9 +393,15 @@
+ 	if (accel != NULL && accel->init()) {
+ 		accel->setName("sgx");
+ 		accel->setProperty(kIOUserClientClassKey, "RedwoodGPUUserClient");
++		uint32_t metal = 0;
++		(void)PE_parse_boot_argn("sweetmetal", &metal, sizeof(metal));
++		if (metal != 0) {
++			accel->setProperty("MetalPluginName", "SapphireMetal");
++			accel->setProperty("MetalPluginClassName", "SapphireMTLDevice");
++		}
+ 		if (accel->attach(this)) {
+ 			accel->registerService();
+-			IOLog("SWEET FB: empty IOAcceleratorES published (no 30 s wait in CAMetalContextCreate)\n");
++			IOLog("SWEET FB: IOAcceleratorES published (%s)\n", metal ? "SapphireMetal" : "no Metal plugin");
+ 		}
+ 	}
+ 	OSSafeReleaseNULL(accel);
