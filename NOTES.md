@@ -10,6 +10,20 @@
   locally to `/tmp/hackios-sapphire-metal-build`, but cannot run on the current
   kernel because its `SGPU` user-client ABI is absent. Mesa/EAGL require an
   iPhoneOS SDK not present on this host; no root image or phone test done.
+- Commit `97a1d76` passed XNU CI run `40480884708` (default 16K kernel);
+  artifact `/tmp/hackios-kernel-0952/kernel.development.sweet` passed its
+  SHA256SUMS check. Eight upstream Mesa 25.0.7 patches applied in order to a
+  hash-verified source tarball locally. The Metal bundle compiled as arm64
+  Mach-O with `/usr/bin/ld64.lld`. A local workflow edit adds a `topaz_4k=1` input,
+  and `tools/mkadt.py --amp` emits P 0x100–0x103 plus E 0x0–0x3. This has
+  only been checked by parsing the generated ADT. The locally edited
+  `shim/shim.c` is a diagnostic probe and remains untouched; its silver-core
+  shutdown still needs integration before any eight-core boot. The generated
+  ADT warns that the local D22AP product node source is missing; do not use
+  that ADT in a phone image until the product node is supplied.
+  GitHub rejected pushing the workflow edit: the current OAuth token has no
+  `workflow` scope. The edit remains uncommitted in `.github/workflows/xnu.yml`;
+  no 4K CI build has run.
 - Commit `98ad506` adds patch `0951` to ignore FT5452 empty slots before duplicate-ID checks and opt-in `sweettouchtrace=1` raw-frame/reject logging. It is in the `bringup/sapphiren` branch and the `nosqd/ios-topaz` fork's `topaz` branch. GitHub Actions run `40477991092` succeeded; kernel artifact `/tmp/hackios-kernel-0951/kernel.development.sweet` was checked for the new trace strings. No new iOS boot has been attempted; phone is in installed TWRP recovery, existing working images intact.
 - More advanced `Angelpro09xd/ios-sapphire` branch `sapphire` (commit `344a8af`, 2026-10-26) already handles FT3519T's measured 2160×2400 raw range through patch 0140 and `sweettouch_rx=8640 sweettouch_ry=9600`. Our logs (`../ios-topaz-xnu/logs/sapphiren-latest.txt`, untracked) show chip ID `54:52`, firmware `2c`, vendor `48`, 36 `err=5` records and clipped touch positions. Adapt 0140 to 0950/0951, then verify raw reports on this firmware before declaring the touch fixed. Boot args alone do nothing on the existing kernel.
 - Upstream 0234's GPU/Mesa, 4K/eight-core XNU and UEFI are coupled to many later patches, userland binaries and phone firmware. This phone has 8 GiB RAM and a live DT splash region at `0x5c000000`; upstream 4K patch 0219 hardcodes `0x9c000000` for its early framebuffer. Keep these as a separate, staged integration after touch.
