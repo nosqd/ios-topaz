@@ -521,7 +521,9 @@ void shim_main(uint64_t dtb)
 		__asm__ volatile("dsb sy" ::: "memory");
 		int64_t r = smc(PSCI_CPU_ON, 0x100, (uintptr_t)secondary_entry, 4);
 		if (r == 0) {
-			for (;;)	/* parked with DAIF masked (start.S) */
+			/* Let the 4K AMP kernel start this silver CPU through PSCI later. */
+			smc(PSCI_CPU_OFF, 0, 0, 0);
+			for (;;)	/* CPU_OFF must not return; keep it parked if it does */
 				__asm__ volatile("wfi");
 		}
 		gold_dtb = 0;
