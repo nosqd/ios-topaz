@@ -73,7 +73,9 @@ For 4K/eight-core work, sapphire 0216–0218 correspond to our 0140–0142;
 0219. The current 4K early framebuffer mapping remains `0x5c000000`.
 
 The matching offline boot artifacts are
-`firmware/sapphiren-mega-16k-gpu-0955-boot.img` and
-`firmware/sapphiren-mega-4k8cpu-gpu-0956-boot.img`; both pass `gpu=1`.
-The 4K/eight-core boot is experimental. See `firmware/SAPPHIREN-MEGA-0956.md`
+`firmware/sapphiren-mega-16k-gpu-highmem-0958-boot.img` and
+`firmware/sapphiren-mega-4k8cpu-gpu-highmem-0958-boot.img`; both pass `gpu=1`
+and use highmem ADTs so the GPU pool cannot overlap kernel-managed RAM.
+Patch 0958 supplies a separate below-4-GiB framebuffer pool. The
+4K/eight-core boot is experimental. See `firmware/SAPPHIREN-MEGA-0958.md`
 for hashes and verification details. No operation was performed on the phone.
