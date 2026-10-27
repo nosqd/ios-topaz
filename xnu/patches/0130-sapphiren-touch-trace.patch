@@ -1,0 +1,78 @@
+--- a/bsd/dev/sweet_touch.c
++++ b/bsd/dev/sweet_touch.c
+@@ -94,6 +94,7 @@
+ 	unsigned s_frames, s_errs, s_down, s_up, s_maxn;
+ 	int s_lasterr, s_lastx, s_lasty;
+ 	uint8_t s_raw[12];
++	unsigned trace, trace_frames;
+ } st;
+ static int touch_sleep_chan;
+ 
+@@ -483,6 +484,18 @@
+ 		return err;
+ 	}
+ 	unsigned n = buf[2] & 15u, active = 0;
++	if (st.trace && st.trace_frames < 400 &&
++	    ((n && n <= TOUCH_MAX) || st.active || st.trace_frames < 4)) {
++		st.trace_frames++;
++		printf("SWEET TOUCH RAW: n=%u active=%#x data="
++		    "%02x %02x %02x | %02x %02x %02x %02x %02x %02x | "
++		    "%02x %02x %02x %02x %02x %02x | "
++		    "%02x %02x %02x %02x %02x %02x\n",
++		    n, st.active, buf[0], buf[1], buf[2],
++		    buf[3], buf[4], buf[5], buf[6], buf[7], buf[8],
++		    buf[9], buf[10], buf[11], buf[12], buf[13], buf[14],
++		    buf[15], buf[16], buf[17], buf[18], buf[19], buf[20]);
++	}
+ 	if (n || !st.s_frames) {
+ 		memcpy(st.s_raw, buf, sizeof(st.s_raw)); /* keep the last frame with contacts */
+ 	}
+@@ -490,7 +503,7 @@
+ 	if (n > st.s_maxn) {
+ 		st.s_maxn = n;
+ 	}
+-	if (n > TOUCH_MAX && buf[3] == 0xffu) {
++	if (n == 0 || (n > TOUCH_MAX && buf[3] == 0xffu)) {
+ 		/*
+ 		 * topaz: with no contact the FT5452 (firmware as updated by HyperOS
+ 		 * 2.0.208) reports TD_STATUS 0xff and 0xff records. TopazTouch: a count
+@@ -518,20 +531,28 @@
+ 		if (id >= TOUCH_MAX) {
+ 			break; /* vendor's unused-record sentinel */
+ 		}
++		if (event == 3u) {
++			continue; /* unused slot may repeat another slot's id */
++		}
+ 		if (seen & (1u << id)) {
++			if (st.trace && st.trace_frames < 400) {
++				printf("SWEET TOUCH REJECT: duplicate id=%u slot=%u event=%u\n",
++				    id, i, event);
++			}
+ 			return EIO;
+ 		}
+ 		seen |= 1u << id;
+ 		if (event == 1u) {
+ 			continue; /* UP record */
+-		}
+-		if (event == 3u) {
+-			continue; /* topaz: "no event" slot (TopazTouch) */
+ 		}
+ 		unsigned px = ((unsigned)(p[0] & 15u) << 8) | p[1];
+ 		unsigned py = ((unsigned)(p[2] & 15u) << 8) | p[3];
+ 		/* topaz: raw 0..1349 x 0..2999 (1.25x the panel) + 2-bit fractions */
+ 		if (px > 1349 || py > 2999) {
++			if (st.trace && st.trace_frames < 400) {
++				printf("SWEET TOUCH REJECT: coords slot=%u id=%u event=%u raw=%u,%u\n",
++				    i, id, event, px, py);
++			}
+ 			return EIO;
+ 		}
+ 		px = (px * 4u + (p[4] >> 6)) / 5u;
+@@ -749,6 +770,7 @@
+ 	st.irq_hint = 1; /* topaz: read on IRQ GPIO80 low, while touching, else every 100 ms */
+ 	(void)PE_parse_boot_argn("sweettouchirq", &st.irq_hint, sizeof(st.irq_hint));
+ 	(void)PE_parse_boot_argn("sweettouchdiag", &st.diag, sizeof(st.diag));
++	(void)PE_parse_boot_argn("sweettouchtrace", &st.trace, sizeof(st.trace));
+ 	if (!enabled) {
+ 		printf("SWEET TOUCH: disabled (sweettouch=0)\n");
+ 		return;
