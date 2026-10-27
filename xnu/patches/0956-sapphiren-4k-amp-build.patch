@@ -1,0 +1,19 @@
+From: Sapphiren integration <local>
+Subject: [PATCH] sapphiren: build isolated 4K AMP kernel variant
+
+Set TOPAZ_4K for the dedicated 4K branch so CI can compile the existing
+0140–0142/0952 page and AMP series without changing the 16K branch.
+
+--- a/makedefs/MakeInc.def
++++ b/makedefs/MakeInc.def
+@@ -16,6 +16,10 @@
+ #
+ SUPPORTED_KERNEL_CONFIGS = RELEASE DEVELOPMENT DEBUG PROFILE KASAN
+ 
++# Experimental sapphire AMP build: use 4 KiB pages and propagate the granule
++# choice to every recursive make, without changing the main 16 KiB branch.
++export TOPAZ_4K := 1
++
+ 
+ #
+ # Machine Configuration options
