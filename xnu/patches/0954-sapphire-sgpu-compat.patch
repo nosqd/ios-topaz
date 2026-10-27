@@ -1,0 +1,133 @@
+From: Sapphiren integration <local>
+Subject: [PATCH] sapphiren: expose RedwoodGPU through Sapphire SGPU ABI
+
+Add the Sapphire scalar IOUserClient selectors to the existing RedwoodGPU service, keeping its
+buffer allocator, SMMU mappings, cache operations, submit ring and fence wait implementation.
+Publish the same user client class on IOAcceleratorES for SapphireMetal discovery.
+
+This is an experimental direct-Metal path; EAGL/freedreno remains the default GPU route.
+
+--- a/xnu/iokit/Kernel/arm/RedwoodGPU.cpp
++++ b/xnu/iokit/Kernel/arm/RedwoodGPU.cpp
+@@ -434,6 +434,7 @@
+ 	IOReturn gemInfo(struct msm_gem_info * request);
+ 	IOReturn submit(struct msm_gem_submit * request);
+ 	IOReturn show(const struct redwood_show * request);
++	IOReturn sapphireMethod(uint32_t selector, IOExternalMethodArguments * args);
+ 
+ public:
+ 	virtual bool initWithTask(task_t owningTask, void * securityID, UInt32 type, OSDictionary * properties) APPLE_KEXT_OVERRIDE;
+@@ -1216,6 +1217,91 @@
+ 	return ret;
+ }
+ 
++/* Sapphire's experimental Metal bundle uses a scalar ABI instead of DRM/MSM structures. */
++IOReturn
++RedwoodGPUUserClient::sapphireMethod(uint32_t selector, IOExternalMethodArguments * args)
++{
++	uint64_t *in = args->scalarInput, *out = args->scalarOutput;
++	uint32_t ni = args->scalarInputCount, no = args->scalarOutputCount;
++	uint64_t began, took;
++	struct gpu_buffer *b;
++	IOReturn ret = kIOReturnBadArgument;
++
++	switch (selector) {
++	case 0: /* info */
++		if (ni == 0 && no >= 5) {
++			out[0] = 610; out[1] = 0x06010001; out[2] = 0x01000000; out[3] = 0xF0000000; out[4] = 0;
++			args->scalarOutputCount = 5; ret = kIOReturnSuccess;
++		}
++		break;
++	case 1: /* create a normal Redwood buffer; fixed VA is accepted only if allocator chose it */
++		if (ni == 2 && no >= 2 && in[0] != 0 && in[0] <= GPU_BUFFER_MAX &&
++		    (in[1] == 0 || (!redwood_gpu_identity() && in[1] == 0x01000000))) {
++			struct msm_gem_new req = { in[0], 0, 0 };
++			ret = gemNew(&req);
++			if (ret == kIOReturnSuccess) {
++				IOLockLock(gGPULock); b = buffer(req.handle);
++				if (b == NULL || (in[1] != 0 && b->address != in[1])) {
++					if (b != NULL) freeBuffer(b);
++					ret = kIOReturnNoMemory;
++				} else { out[0] = req.handle; out[1] = b->address; args->scalarOutputCount = 2; }
++				IOLockUnlock(gGPULock);
++			}
++		}
++		break;
++	case 2: /* release */
++		if (ni == 1) {
++			IOLockLock(gGPULock); b = buffer((uint32_t)in[0]);
++			if (b != NULL) { freeBuffer(b); reap(); ret = kIOReturnSuccess; }
++			IOLockUnlock(gGPULock);
++		}
++		break;
++	case 3: /* IOSurface import */
++		if (ni == 1 && no >= 3) {
++			struct redwood_surface req = { (uint32_t)in[0], 0, 0, 0, 0, 0, 0, 0, 0 };
++			ret = surfaceBuffer(&req);
++			if (ret == kIOReturnSuccess) {
++				IOLockLock(gGPULock); b = buffer(req.handle);
++				if (b != NULL) { out[0] = req.handle; out[1] = b->address; out[2] = req.size; args->scalarOutputCount = 3; }
++				else ret = kIOReturnNotFound;
++				IOLockUnlock(gGPULock);
++			}
++		}
++		break;
++	case 4: /* clean/invalidate all this client's buffers */
++		if (ni == 1) {
++			IOLockLock(gGPULock); b = buffer((uint32_t)in[0]);
++			if (b != NULL) { redwood_gpu_to_memory(b->kernel, b->size); b->seen = true; ret = kIOReturnSuccess; }
++			IOLockUnlock(gGPULock);
++		}
++		break;
++	case 5: /* submit one IB contained in a buffer owned by this client and wait for completion */
++		if (ni == 3 && no >= 2 && in[1] != 0 && in[1] <= GPU_BUFFER_MAX / 4 && redwood_gpu_ready()) {
++			IOLockLock(gGPULock);
++			uint64_t end = in[0] + in[1] * 4;
++			b = NULL;
++			for (uint32_t i = 0; i < GPU_BUFFERS; i++)
++				if (fBuffers[i].memory != NULL && in[0] >= fBuffers[i].address && end >= in[0] && end <= fBuffers[i].address + fBuffers[i].size) { b = &fBuffers[i]; break; }
++			if (b != NULL) {
++				began = mach_absolute_time();
++				for (uint32_t i = 0; i < GPU_BUFFERS; i++)
++					if (fBuffers[i].memory != NULL && fBuffers[i].kernel != NULL) redwood_gpu_to_memory(fBuffers[i].kernel, fBuffers[i].size);
++				redwood_gpu_to_memory(NULL, 0);
++				uint64_t address = in[0]; uint32_t words = (uint32_t)in[1];
++				uint32_t fence = redwood_gpu_submit(&address, &words, 1);
++				bool done = fence != 0 && gpuWait(fence, in[2]);
++				absolutetime_to_nanoseconds(mach_absolute_time() - began, &took);
++				if (done) { out[0] = fence; out[1] = took / NSEC_PER_USEC; args->scalarOutputCount = 2; ret = kIOReturnSuccess; }
++				else { gGPUReported = true; redwood_gpu_report("SGPU submit timeout"); ret = kIOReturnTimeout; }
++			}
++			IOLockUnlock(gGPULock);
++		}
++		break;
++	default: ret = kIOReturnUnsupported; break;
++	}
++	return ret;
++}
++
+ IOReturn
+ RedwoodGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments * args,
+     IOExternalMethodDispatch * dispatch, OSObject * target, void * reference)
+@@ -1238,6 +1324,11 @@
+ 	struct gpu_buffer * b;
+ 	IOReturn ret = kIOReturnSuccess;
+ 	uint64_t zero = 0, patience, waitBegan;
++	if (args->structureInput == NULL && args->structureInputSize == 0 && args->scalarInputCount <= 3 &&
++	    args->scalarOutputCount <= 5 && fBuffers != NULL) {
++		if (!redwood_gpu_ready()) return kIOReturnNotReady;
++		return sapphireMethod(selector, args);
++	}
+ 
+ 	if (args->structureInput == NULL || size > sizeof(r) || fBuffers == NULL) {
+ 		return kIOReturnBadArgument;
+--- a/xnu/iokit/Kernel/arm/SweetFramebuffer.cpp
++++ b/xnu/iokit/Kernel/arm/SweetFramebuffer.cpp
+@@ -392,6 +392,7 @@
+ 	IOAcceleratorES *accel = accelOn ? OSTypeAlloc(IOAcceleratorES) : NULL;
+ 	if (accel != NULL && accel->init()) {
+ 		accel->setName("sgx");
++		accel->setProperty(kIOUserClientClassKey, "RedwoodGPUUserClient");
+ 		if (accel->attach(this)) {
+ 			accel->registerService();
+ 			IOLog("SWEET FB: empty IOAcceleratorES published (no 30 s wait in CAMetalContextCreate)\n");
