@@ -2,7 +2,8 @@
 """Build the minimal Apple Device Tree that the TOPAZ xnu needs to boot.
 
 Only what the early boot path actually reads (see NOTES.md); every MMIO
-address comes from the topaz (Redmi Note 12 4G, SM6225 khaje) live FDT. Usage:  mkadt.py OUT.adt [--dump] [--qemu] [--highmem]
+address comes from the topaz (Redmi Note 12 4G, SM6225 khaje) live FDT.
+Usage: mkadt.py OUT.adt [--amp] [--highmem] [--ram-base PA --ram-size BYTES]
 """
 import hashlib, os, struct, sys
 
@@ -77,10 +78,16 @@ def node(name, props=(), children=()):
 
 
 def build(seed=None, qemu=False, highmem=False, native=False, midmem=False,
-          amp=False, product_adt=D22AP_ADT):
+          amp=False, product_adt=D22AP_ADT, ram_base=None, ram_size=None):
     """qemu=True: same tree, but with QEMU virt's GIC addresses and CNTFRQ (tools/qemu-sweet.py)."""
     phys_base, mem_size = ((MID_PHYS_BASE, MID_MEM_SIZE) if midmem else
                            (HIGH_PHYS_BASE, HIGH_MEM_SIZE) if highmem else (PHYS_BASE, MEM_SIZE))
+    if (ram_base is None) != (ram_size is None):
+        raise ValueError('RAM base and size must be specified together')
+    if ram_base is not None:
+        if ram_base < 0 or ram_size <= 0 or (ram_base | ram_size) & 0x3fff:
+            raise ValueError('RAM base and size must be positive and 16K aligned')
+        phys_base, mem_size = ram_base, ram_size
     gicd, gicr, timebase = (QEMU_GICD, QEMU_GICR, QEMU_TIMEBASE) if qemu else (GICD, GICR, TIMEBASE)
     seed = seed if seed is not None else os.urandom(64)
     phandle = iter(range(1, 1000))
@@ -255,11 +262,15 @@ def build(seed=None, qemu=False, highmem=False, native=False, midmem=False,
 
 
 if __name__ == '__main__':
+    def hex_option(name):
+        return int(sys.argv[sys.argv.index(name) + 1], 0) if name in sys.argv else None
+
     product_adt = (sys.argv[sys.argv.index('--product-adt') + 1]
                    if '--product-adt' in sys.argv else D22AP_ADT)
     root = build(qemu='--qemu' in sys.argv, highmem='--highmem' in sys.argv,
                  native='--native' in sys.argv, midmem='--midmem' in sys.argv,
-                 amp='--amp' in sys.argv, product_adt=product_adt)
+                 amp='--amp' in sys.argv, product_adt=product_adt,
+                 ram_base=hex_option('--ram-base'), ram_size=hex_option('--ram-size'))
     blob = adt.serialize(root)
     open(sys.argv[1], 'wb').write(blob)
     if '--dump' in sys.argv:
