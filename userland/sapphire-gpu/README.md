@@ -25,7 +25,7 @@ retain their own upstream notices. The original design notes are in
 1. Mesa 25.0.7, the EAGL bridge, the AIR library and the Metal bundle were
    built on 2026-10-27 with the Theos iPhoneOS 16.5 SDK in `/tmp/hackios-sdk`
    and LLVM 23 in `/usr/bin`. The source patches applied cleanly. The outputs
-   are staged in `/tmp/hackios-mega-gpu-stage.tar.xz` with a SHA256 manifest.
+   are staged in `/tmp/hackios-mega-gpu-stage-full.tar.xz` with a SHA256 manifest.
    This is a host build, not a runtime verification or a signed install.
    Rebuild with `SDK=/path/to/iPhoneOS.sdk LLVM=/usr/bin B=/tmp/mesa-build
    ./mk-mesa.sh`, then `SDK=... LLVM=/usr/bin M=/tmp/mesa-build/out
@@ -45,10 +45,16 @@ retain their own upstream notices. The original design notes are in
    also needs a verified rename of the original and launchd behavior.
    Keep the known-good image as a
    fallback. No install or phone write is performed by this source stage.
-4. `SapphireMetal`'s direct `SGPU` client needs XNU patch 0148's ABI on
-   `IOAcceleratorES`. Our patch 0138 currently publishes an empty service, so
-   the Metal mode must stay disabled. Its `sweetgl=1` fallback is useful only
-   after the service advertises the plugin and the EAGL/Mesa path is built.
+4. XNU patch 0954 adds the experimental Sapphire scalar `SGPU` selectors to
+   `RedwoodGPUUserClient` and advertises that class on `IOAcceleratorES`. It
+   reuses our existing buffer, cache, SMMU and fence machinery instead of
+   importing Sapphire's separate `SapphireGpuClient`. Its fixed-VA support is
+   deliberately limited to the self-test's initial `0x01000000` allocation;
+   a busy GPU address space can reject that request. Patch 0954 has passed a
+   dry-apply against the successful 0953 build source, but has not yet had a
+   kernel build or device runtime test. Keep the optional Metal bundle disabled
+   until those checks pass. The `sweetgl=1` EAGL/Mesa route does not depend on
+   this experimental ABI.
 5. AIR/Metal compilation is research code. It is included to preserve the
    complete upstream GPU source, but is not part of the proven EAGL/freedreno
    route to the iOS home screen.
