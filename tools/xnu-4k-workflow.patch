@@ -1,0 +1,34 @@
+diff --git a/.github/workflows/xnu.yml b/.github/workflows/xnu.yml
+index f020662..e2b6848 100644
+--- a/.github/workflows/xnu.yml
++++ b/.github/workflows/xnu.yml
+@@ -12,6 +12,9 @@ on:
+       machine_config:
+         description: xnu MACHINE_CONFIG
+         default: SWEET
++      topaz_4k:
++        description: Build SWEET with 4 KiB hardware pages for AMP CPUs (0 or 1)
++        default: "0"
+       keep_going:
+         description: make -k (collect all compile errors in one run)
+         default: "true"
+@@ -32,6 +35,7 @@ env:
+   MACOS_VERSION: ${{ inputs.macos_version || '13.5' }}
+   KERNEL_CONFIG: ${{ inputs.kernel_config || 'DEVELOPMENT' }}
+   MACHINE_CONFIG: ${{ inputs.machine_config || 'SWEET' }}
++  TOPAZ_4K: ${{ inputs.topaz_4k || '0' }}
+   # ccache: xnu is ~2000 compiles; a patch usually changes a few of them
+   CCACHE_DIR: ${{ github.workspace }}/.ccache
+   CCACHE_BASEDIR: ${{ github.workspace }}
+@@ -91,9 +95,9 @@ jobs:
+         uses: actions/cache@v4
+         with:
+           path: ${{ github.workspace }}/.ccache
+-          key: ccache-${{ env.MACHINE_CONFIG }}-${{ env.KERNEL_CONFIG }}-${{ hashFiles('xnu/patches/**', '.github/workflows/xnu.yml') }}
++          key: ccache-${{ env.MACHINE_CONFIG }}-${{ env.KERNEL_CONFIG }}-4k${{ env.TOPAZ_4K }}-${{ hashFiles('xnu/patches/**', '.github/workflows/xnu.yml') }}
+           restore-keys: |
+-            ccache-${{ env.MACHINE_CONFIG }}-${{ env.KERNEL_CONFIG }}-
++            ccache-${{ env.MACHINE_CONFIG }}-${{ env.KERNEL_CONFIG }}-4k${{ env.TOPAZ_4K }}-
+ 
+       - name: Build
+         working-directory: dxb

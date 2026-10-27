@@ -22,7 +22,8 @@
   artifact `/tmp/hackios-kernel-0952/kernel.development.sweet` passed its
   SHA256SUMS check. Eight upstream Mesa 25.0.7 patches applied in order to a
   hash-verified source tarball locally. The Metal bundle compiled as arm64
-  Mach-O with `/usr/bin/ld64.lld`. A local workflow edit adds a `topaz_4k=1` input,
+  Mach-O with `/usr/bin/ld64.lld`. The proposed workflow edit in
+  `tools/xnu-4k-workflow.patch` adds a `topaz_4k=1` input,
   and `tools/mkadt.py --amp` emits P 0x100–0x103 plus E 0x0–0x3. This has
   only been checked by parsing the generated ADT. The locally edited
   `shim/shim.c` is a diagnostic probe and remains untouched; its silver-core
@@ -32,8 +33,8 @@
   ADT: offline `--amp --highmem` generation parsed with 8 CPUs and the product
   node. The prior default D22AP source is absent locally.
   GitHub rejected pushing the workflow edit: the current OAuth token has no
-  `workflow` scope. The edit remains uncommitted in `.github/workflows/xnu.yml`;
-  no 4K CI build has run.
+  `workflow` scope. The edit is stored as a patch outside `.github/workflows`
+  and applies cleanly to the current workflow; no 4K CI build has run.
 - Theos's published iPhoneOS 16.5 SDK archive (SHA256
   `5e0fd3f01266cce4ce012d4a99b38eb56578fca40d09edc81cd83dee958202fb`)
   enabled a local arm64 build: Mesa/freedreno 25.0.7 OSMesa, EAGL bridge and
