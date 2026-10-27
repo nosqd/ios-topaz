@@ -30,7 +30,9 @@ retain their own upstream notices. The original design notes are in
    Rebuild with `SDK=/path/to/iPhoneOS.sdk LLVM=/usr/bin B=/tmp/mesa-build
    ./mk-mesa.sh`, then `SDK=... LLVM=/usr/bin M=/tmp/mesa-build/out
    ./build-gl.sh`. `mk-mesa.sh` replaces its own build tree; use a dedicated
-   `B` directory.
+   `B` directory. `tools/stage-sapphire-gpu.sh` packages the built dylibs and
+   optional Metal bundle; set `MESA_OUT`, `MESA_BUILD`, and optionally
+   `METAL_BUNDLE` before running it.
 2. The `redwood-drm` request header is byte-identical to our existing one;
    selector numbers match the `RedwoodGPU` kernel, and its optional WC probe
    falls back when unsupported. Buffer cache behavior, surface handling and
