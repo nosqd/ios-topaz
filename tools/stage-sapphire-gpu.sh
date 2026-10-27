@@ -7,6 +7,7 @@ gpu="$repo/userland/sapphire-gpu"
 mesa_out=${MESA_OUT:?Set MESA_OUT to the Mesa build out directory}
 mesa_build=${MESA_BUILD:?Set MESA_BUILD to the Mesa build directory}
 metal_bundle=${METAL_BUNDLE:-$gpu/metal/out/SapphireMetal.bundle}
+loader_out=${LOADER_OUT:-}
 out=${1:-/tmp/hackios-mega-gpu-stage}
 stage="$out/redwood/lib"
 
@@ -20,15 +21,25 @@ if [[ -f "$metal_bundle/SapphireMetal" ]]; then
     cp -a "$metal_bundle" "$out/optional-metal/"
 fi
 
+if [[ -n "$loader_out" ]]; then
+    mkdir -p "$out/topaz/lib" "$out/optional-wrapper"
+    install -m 0755 "$loader_out/libtopaz-inject.dylib" "$out/topaz/lib/libtopaz-inject.dylib"
+    install -m 0755 "$loader_out/backboardd-wrapper" "$out/optional-wrapper/backboardd"
+fi
+
 (
     cd "$out"
     sha256sum redwood/lib/*.dylib > SHA256SUMS
     if [[ -f optional-metal/SapphireMetal.bundle/SapphireMetal ]]; then
         sha256sum optional-metal/SapphireMetal.bundle/SapphireMetal >> SHA256SUMS
     fi
+    if [[ -f topaz/lib/libtopaz-inject.dylib ]]; then
+        sha256sum topaz/lib/libtopaz-inject.dylib optional-wrapper/backboardd >> SHA256SUMS
+    fi
     sha256sum -c SHA256SUMS
     paths=(redwood SHA256SUMS)
     [[ ! -d optional-metal ]] || paths+=(optional-metal)
+    [[ ! -d topaz ]] || paths+=(topaz optional-wrapper)
     tar -cJf "$out.tar.xz" "${paths[@]}"
 )
 echo "$out.tar.xz"

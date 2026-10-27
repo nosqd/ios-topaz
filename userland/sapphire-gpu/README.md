@@ -18,7 +18,7 @@ retain their own upstream notices. The original design notes are in
   `/usr/bin/ld64.lld`.
 - `mk-mesa.sh` and `build-gl.sh` use a caller-provided iPhoneOS `SDK` and a
   local `build-mesa` work directory by default. Both produce `/redwood` install
-  names, which match the existing `userland/gpu/inject.c` loader.
+  names, which match `userland/gpu/topaz_inject.c` after its path update.
 
 ## Still needed before an image can use this stack
 
@@ -30,15 +30,20 @@ retain their own upstream notices. The original design notes are in
    Rebuild with `SDK=/path/to/iPhoneOS.sdk LLVM=/usr/bin B=/tmp/mesa-build
    ./mk-mesa.sh`, then `SDK=... LLVM=/usr/bin M=/tmp/mesa-build/out
    ./build-gl.sh`. `mk-mesa.sh` replaces its own build tree; use a dedicated
-   `B` directory. `tools/stage-sapphire-gpu.sh` packages the built dylibs and
-   optional Metal bundle; set `MESA_OUT`, `MESA_BUILD`, and optionally
+   `B` directory. `tools/build-topaz-gpu-loader.sh` builds the iOS 16.7
+   backboardd loader, which now loads `/redwood/lib/libredwood-gl.dylib`.
+   `tools/stage-sapphire-gpu.sh` packages all dylibs and the optional Metal
+   bundle; set `MESA_OUT`, `MESA_BUILD`, `LOADER_OUT`, and optionally
    `METAL_BUNDLE` before running it.
 2. The `redwood-drm` request header is byte-identical to our existing one;
    selector numbers match the `RedwoodGPU` kernel, and its optional WC probe
    falls back when unsupported. Buffer cache behavior, surface handling and
    fence waits still need a device runtime test.
-3. Put the built `/redwood/lib` files into a **copy** of the iOS root image
-   and connect the chosen injection path. Keep the known-good image as a
+3. Put the built `/redwood/lib` and `/topaz/lib` files into a **copy** of the
+   iOS root image and connect the chosen injection path. The wrapper is
+   packaged under `optional-wrapper/`: replacing `/usr/libexec/backboardd`
+   also needs a verified rename of the original and launchd behavior.
+   Keep the known-good image as a
    fallback. No install or phone write is performed by this source stage.
 4. `SapphireMetal`'s direct `SGPU` client needs XNU patch 0148's ABI on
    `IOAcceleratorES`. Our patch 0138 currently publishes an empty service, so
