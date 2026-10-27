@@ -1,0 +1,67 @@
+From: Sapphiren integration <local>
+Subject: [PATCH] sapphiren: set silver cpufreq only in 4K AMP builds
+
+Adapted from ios-sapphire 0219; preserve the existing 0x5c000000 splash mapping.
+
+---
+diff --git a/bsd/dev/sweet_cpufreq.c b/bsd/dev/sweet_cpufreq.c
+--- a/bsd/dev/sweet_cpufreq.c
++++ b/bsd/dev/sweet_cpufreq.c
+@@ -13,20 +13,16 @@
+ int sweet_cpufreq_max(void);
+ 
+ #define CPUFREQ_GOLD_PA         0x0f523000u
++#define CPUFREQ_SILVER_PA       0x0f521000u
+ #define CPUFREQ_FREQ_LUT        0x110u
+ #define CPUFREQ_LUT_ROW         0x20u
+ #define CPUFREQ_PERF_STATE      0x920u
+ #define CPUFREQ_LUT_MAX         12
+ 
+-int
+-sweet_cpufreq_max(void)
++static int
++sweet_cpufreq_domain_max(uint32_t pa, const char *name)
+ {
+-	int on = 1;
+-	PE_parse_boot_argn("sweetcpufreq", &on, sizeof(on));
+-	if (!on) {
+-		return 0;
+-	}
+-	vm_offset_t b = ml_io_map(CPUFREQ_GOLD_PA, 0x1000);
++	vm_offset_t b = ml_io_map(pa, 0x1000);
+ 	if (b == 0) {
+ 		return -1;
+ 	}
+@@ -36,7 +32,7 @@
+ 		uint32_t src = (v >> 30) & 3u, lval = v & 0xffu;
+ 		uint32_t khz = src ? 19200u * lval : 300000u;
+ 		if (i > 0 && khz == prevKHz) {
+-			break;          /* the LUT repeats its last entry */
++			break;
+ 		}
+ 		prevKHz = khz;
+ 		if (khz > bestKHz) {
+@@ -48,7 +44,22 @@
+ 	__asm__ volatile("dsb sy" ::: "memory");
+ 	*(volatile uint32_t *)(b + CPUFREQ_PERF_STATE) = best;
+ 	__asm__ volatile("dsb sy" ::: "memory");
+-	printf("SWEET CPUFREQ: gold perf state %u -> %u (%u MHz)\n", old, best, bestKHz / 1000);
++	printf("SWEET CPUFREQ: %s perf state %u -> %u (%u MHz)\n", name, old, best, bestKHz / 1000);
+ 	return 0;
+ }
++
++int
++sweet_cpufreq_max(void)
++{
++	int on = 1;
++	PE_parse_boot_argn("sweetcpufreq", &on, sizeof(on));
++	if (!on) {
++		return 0;
++	}
++	int rc = sweet_cpufreq_domain_max(CPUFREQ_GOLD_PA, "gold");
++#if defined(TOPAZ_4K)
++	(void)sweet_cpufreq_domain_max(CPUFREQ_SILVER_PA, "silver");
++#endif
++	return rc;
++}
+ #endif /* ARM64_BOARD_CONFIG_SWEET */

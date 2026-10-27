@@ -55,3 +55,7 @@ SOFTWARE.
 - **ios-sweet** (dipa-studio): the XNU port this tree is built on.
 - **Mesa / freedreno**: the OpenGL ES driver for the Adreno.
 - **blacktop/darwin-xnu-build**: the XNU build scripts.
+- **ios-sapphire** (Angelpro09xd): the staged GPU/Mesa/EAGL/Metal source in
+  `userland/sapphire-gpu/` is from branch `sapphire` at `344a8af2a9d5`.
+  Its HackiOS-derived files retain the MIT notice in that directory; XNU
+  ideas remain subject to their original source license.

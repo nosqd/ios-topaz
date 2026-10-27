@@ -1,0 +1,4 @@
+build-mesa/
+obj/
+metal/out/
+__pycache__/
