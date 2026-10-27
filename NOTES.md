@@ -1,5 +1,11 @@
 # iOS 16 on sweet (Redmi Note 10 Pro, SM7150) - working notes
 
+## Sapphiren touch status — 2026-10-27
+
+- Commit `98ad506` adds patch `0951` to ignore FT5452 empty slots before duplicate-ID checks and opt-in `sweettouchtrace=1` raw-frame/reject logging. It is in the `bringup/sapphiren` branch and the `nosqd/ios-topaz` fork's `topaz` branch. GitHub Actions run `40477991092` succeeded; kernel artifact `/tmp/hackios-kernel-0951/kernel.development.sweet` was checked for the new trace strings. No new iOS boot has been attempted; phone is in installed TWRP recovery, existing working images intact.
+- More advanced `Angelpro09xd/ios-sapphire` branch `sapphire` (commit `344a8af`, 2026-10-26) already handles FT3519T's measured 2160×2400 raw range through patch 0140 and `sweettouch_rx=8640 sweettouch_ry=9600`. Our logs (`../ios-topaz-xnu/logs/sapphiren-latest.txt`, untracked) show chip ID `54:52`, firmware `2c`, vendor `48`, 36 `err=5` records and clipped touch positions. Adapt 0140 to 0950/0951, then verify raw reports on this firmware before declaring the touch fixed. Boot args alone do nothing on the existing kernel.
+- Upstream 0234's GPU/Mesa, 4K/eight-core XNU and UEFI are coupled to many later patches, userland binaries and phone firmware. This phone has 8 GiB RAM and a live DT splash region at `0x5c000000`; upstream 4K patch 0219 hardcodes `0x9c000000` for its early framebuffer. Keep these as a separate, staged integration after touch.
+
 ## Agent handoff / active work (2026-10-15, latest)
 
 ### >>> UPDATE 2026-10-18 (read first, then the 10-17 handoff below) <<<
