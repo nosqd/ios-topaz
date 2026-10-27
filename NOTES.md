@@ -12,6 +12,13 @@
   `/tmp/hackios-kernel-0953/kernel.development.sweet` passed SHA256SUMS and
   contains the raw-range diagnostic string. It still needs a later phone test
   when user permits. Existing boot args retain topaz defaults.
+  A clean detached worktree at `/tmp/hackios-topaz-clean` built a temporary
+  16K four-core test boot image `/tmp/hackios-sapphiren-touch-0953.img`
+  (SHA256 `17b9cc020320f8f3efb1d518480dd922b7c7b8dc29b375c641b2630f7b1cbe62`),
+  using the known-working 1 GiB `sapphiren-iphoneX.adt` and boot args
+  `sweettouch_rx=8640 sweettouch_ry=9600 sweettouchtrace=1`. Header v4 and
+  embedded payload equality were checked offline. This candidate has **not**
+  been booted and must not replace any known-good image.
 - GPU/4K integration source stage: `userland/sapphire-gpu/` holds the
   ios-sapphire `344a8af` Mesa/EAGL/AIR/Metal source, adapted to look for our
   `RedwoodGPU` service. `xnu/patches/0952-sapphiren-silver-cpufreq.patch`
