@@ -22,16 +22,20 @@ retain their own upstream notices. The original design notes are in
 
 ## Still needed before an image can use this stack
 
-1. Build Mesa and the EAGL bridge against an iPhoneOS SDK. The current host
-   has no such SDK, so neither binary has been produced here. The scripts
-   require `SDK=/path/to/iPhoneOS.sdk`; `LLVM`, `B`, and `M` can override the
-   toolchain and build locations. `mk-mesa.sh` downloads Mesa 25.0.7, verifies
-   its hash, then replaces its *own* build tree; use a dedicated `B` directory.
-2. Compare the `redwood-drm` request structs and buffer cache policy against
-   the final `RedwoodGPU` kernel. The name match alone does not prove the ABI.
-   In particular, sapphire's WC memory probe (GET_PARAM 0x1000), surface
-   handling, and fence waits need a real build and an isolated runtime test.
-3. Package the built `/redwood/lib` files into a **copy** of the iOS root image
+1. Mesa 25.0.7, the EAGL bridge, the AIR library and the Metal bundle were
+   built on 2026-10-27 with the Theos iPhoneOS 16.5 SDK in `/tmp/hackios-sdk`
+   and LLVM 23 in `/usr/bin`. The source patches applied cleanly. The outputs
+   are staged in `/tmp/hackios-mega-gpu-stage.tar.xz` with a SHA256 manifest.
+   This is a host build, not a runtime verification or a signed install.
+   Rebuild with `SDK=/path/to/iPhoneOS.sdk LLVM=/usr/bin B=/tmp/mesa-build
+   ./mk-mesa.sh`, then `SDK=... LLVM=/usr/bin M=/tmp/mesa-build/out
+   ./build-gl.sh`. `mk-mesa.sh` replaces its own build tree; use a dedicated
+   `B` directory.
+2. The `redwood-drm` request header is byte-identical to our existing one;
+   selector numbers match the `RedwoodGPU` kernel, and its optional WC probe
+   falls back when unsupported. Buffer cache behavior, surface handling and
+   fence waits still need a device runtime test.
+3. Put the built `/redwood/lib` files into a **copy** of the iOS root image
    and connect the chosen injection path. Keep the known-good image as a
    fallback. No install or phone write is performed by this source stage.
 4. `SapphireMetal`'s direct `SGPU` client needs XNU patch 0148's ABI on
