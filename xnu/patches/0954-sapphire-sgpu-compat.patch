@@ -25,7 +25,7 @@ This is an experimental direct-Metal path; EAGL/freedreno remains the default GP
 +IOReturn
 +RedwoodGPUUserClient::sapphireMethod(uint32_t selector, IOExternalMethodArguments * args)
 +{
-+	uint64_t *in = args->scalarInput, *out = args->scalarOutput;
++	const uint64_t *in = args->scalarInput; uint64_t *out = args->scalarOutput;
 +	uint32_t ni = args->scalarInputCount, no = args->scalarOutputCount;
 +	uint64_t began, took;
 +	struct gpu_buffer *b;
