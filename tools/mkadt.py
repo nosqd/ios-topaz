@@ -76,7 +76,8 @@ def node(name, props=(), children=()):
     return n
 
 
-def build(seed=None, qemu=False, highmem=False, native=False, midmem=False, amp=False):
+def build(seed=None, qemu=False, highmem=False, native=False, midmem=False,
+          amp=False, product_adt=D22AP_ADT):
     """qemu=True: same tree, but with QEMU virt's GIC addresses and CNTFRQ (tools/qemu-sweet.py)."""
     phys_base, mem_size = ((MID_PHYS_BASE, MID_MEM_SIZE) if midmem else
                            (HIGH_PHYS_BASE, HIGH_MEM_SIZE) if highmem else (PHYS_BASE, MEM_SIZE))
@@ -229,7 +230,7 @@ def build(seed=None, qemu=False, highmem=False, native=False, midmem=False, amp=
         ('opposed-power-vol-buttons', u32(1)),
     ])
 
-    product_props = d22ap_product()
+    product_props = d22ap_product(product_adt)
     # Our framebuffer is sRGB 8-bit. With the iPhone X's 'P3' MobileGestalt says
     # HasExtendedColorDisplay and WebKit renders page tiles into 10-bit surfaces
     # ('w30r', 'b3a8') that this kernel does not provide: Safari pages stay blank.
@@ -254,9 +255,11 @@ def build(seed=None, qemu=False, highmem=False, native=False, midmem=False, amp=
 
 
 if __name__ == '__main__':
+    product_adt = (sys.argv[sys.argv.index('--product-adt') + 1]
+                   if '--product-adt' in sys.argv else D22AP_ADT)
     root = build(qemu='--qemu' in sys.argv, highmem='--highmem' in sys.argv,
                  native='--native' in sys.argv, midmem='--midmem' in sys.argv,
-                 amp='--amp' in sys.argv)
+                 amp='--amp' in sys.argv, product_adt=product_adt)
     blob = adt.serialize(root)
     open(sys.argv[1], 'wb').write(blob)
     if '--dump' in sys.argv:

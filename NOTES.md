@@ -19,8 +19,10 @@
   only been checked by parsing the generated ADT. The locally edited
   `shim/shim.c` is a diagnostic probe and remains untouched; its silver-core
   shutdown still needs integration before any eight-core boot. The generated
-  ADT warns that the local D22AP product node source is missing; do not use
-  that ADT in a phone image until the product node is supplied.
+  `tools/mkadt.py --product-adt ../ios-topaz-xnu/shim/out/sapphiren-iphoneX.adt`
+  now reuses the 63-property iPhone X `/product` node from the known-working
+  ADT: offline `--amp --highmem` generation parsed with 8 CPUs and the product
+  node. The prior default D22AP source is absent locally.
   GitHub rejected pushing the workflow edit: the current OAuth token has no
   `workflow` scope. The edit remains uncommitted in `.github/workflows/xnu.yml`;
   no 4K CI build has run.
