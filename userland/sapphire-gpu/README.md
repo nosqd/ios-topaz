@@ -50,10 +50,11 @@ retain their own upstream notices. The original design notes are in
    reuses our existing buffer, cache, SMMU and fence machinery instead of
    importing Sapphire's separate `SapphireGpuClient`. Its fixed-VA support is
    deliberately limited to the self-test's initial `0x01000000` allocation;
-   a busy GPU address space can reject that request. Patch 0954 needs a CI rebuild after correcting its XNU-relative paths; the
-   first CI attempt skipped it. It has no device runtime test. Keep the optional Metal bundle disabled
-   until those checks pass. The `sweetgl=1` EAGL/Mesa route does not depend on
-   this experimental ABI.
+   a busy GPU address space can reject that request. CI run 40487165217 built
+   patch 0954 successfully, and its buildtree confirms both the selector and
+   `IOAcceleratorES` property are present. There is no device runtime test yet.
+   Keep the optional Metal bundle disabled until that check is performed. The
+   `sweetgl=1` EAGL/Mesa route does not depend on this experimental ABI.
 5. AIR/Metal compilation is research code. It is included to preserve the
    complete upstream GPU source, but is not part of the proven EAGL/freedreno
    route to the iOS home screen.
