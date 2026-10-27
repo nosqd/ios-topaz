@@ -1,0 +1,79 @@
+From: Sapphiren integration <local>
+Subject: [PATCH] sapphiren: configurable FocalTech raw touch range
+
+Adapt ios-sapphire 0140 to the current trace/release parser. Boot with
+sweettouch_rx=8640 sweettouch_ry=9600 for the sapphire range; raw frame
+logging stays available for the FT5452 firmware on this handset.
+
+---
+diff --git a/bsd/dev/sweet_touch.c b/bsd/dev/sweet_touch.c
+--- a/bsd/dev/sweet_touch.c
++++ b/bsd/dev/sweet_touch.c
+@@ -95,6 +95,7 @@
+ 	int s_lasterr, s_lastx, s_lasty;
+ 	uint8_t s_raw[12];
+ 	unsigned trace, trace_frames;
++	unsigned fbits, rx, ry, rawlog; /* boot-args: sweettouch_fbits/_rx/_ry/_rawlog */
+ } st;
+ static int touch_sleep_chan;
+ 
+@@ -549,18 +550,24 @@
+ 		if (event == 1u) {
+ 			continue; /* UP record */
+ 		}
+-		unsigned px = ((unsigned)(p[0] & 15u) << 8) | p[1];
+-		unsigned py = ((unsigned)(p[2] & 15u) << 8) | p[3];
+-		/* topaz: raw 0..1349 x 0..2999 (1.25x the panel) + 2-bit fractions */
+-		if (px > 1349 || py > 2999) {
+-			if (st.trace && st.trace_frames < 400) {
+-				printf("SWEET TOUCH REJECT: coords slot=%u id=%u event=%u raw=%u,%u\n",
+-				    i, id, event, px, py);
+-			}
+-			return EIO;
+-		}
+-		px = (px * 4u + (p[4] >> 6)) / 5u;
+-		py = (py * 4u + ((p[4] >> 4) & 3u)) / 5u;
++		unsigned hx = ((unsigned)(p[0] & 15u) << 8) | p[1];
++		unsigned hy = ((unsigned)(p[2] & 15u) << 8) | p[3];
++		/* FT coordinates plus 2-bit or 4-bit fractions in byte 4. */
++		uint64_t fx, fy;
++		if (st.fbits == 4u) {
++			fx = ((uint64_t)hx << 4) | (p[4] >> 4);
++			fy = ((uint64_t)hy << 4) | (p[4] & 15u);
++		} else {
++			fx = ((uint64_t)hx << 2) | (p[4] >> 6);
++			fy = ((uint64_t)hy << 2) | ((p[4] >> 4) & 3u);
++		}
++		unsigned px = (unsigned)(fx * 1080u / st.rx);
++		unsigned py = (unsigned)(fy * 2400u / st.ry);
++		if (st.rawlog && !(st.active & (1u << id))) {
++			st.rawlog--;
++			printf("SWEET TOUCH: raw id %u x %u.%x y %u.%x -> %u,%u\n",
++			    id, hx, p[4] >> 4, hy, p[4] & 15u, px, py);
++		}
+ 		px = px > 1079 ? 1079 : px;
+ 		py = py > 2399 ? 2399 : py;
+ 		mask |= 1u << id;
+@@ -775,6 +782,22 @@
+ 	(void)PE_parse_boot_argn("sweettouchirq", &st.irq_hint, sizeof(st.irq_hint));
+ 	(void)PE_parse_boot_argn("sweettouchdiag", &st.diag, sizeof(st.diag));
+ 	(void)PE_parse_boot_argn("sweettouchtrace", &st.trace, sizeof(st.trace));
++	st.fbits = 2;
++	st.rx = 1350u * 4u;
++	st.ry = 3000u * 4u;
++	st.rawlog = 40;
++	(void)PE_parse_boot_argn("sweettouch_fbits", &st.fbits, sizeof(st.fbits));
++	(void)PE_parse_boot_argn("sweettouch_rx", &st.rx, sizeof(st.rx));
++	(void)PE_parse_boot_argn("sweettouch_ry", &st.ry, sizeof(st.ry));
++	(void)PE_parse_boot_argn("sweettouch_rawlog", &st.rawlog, sizeof(st.rawlog));
++	if (st.fbits != 4u) {
++		st.fbits = 2;
++	}
++	if (!st.rx || !st.ry) {
++		st.rx = 1350u * 4u;
++		st.ry = 3000u * 4u;
++	}
++	printf("SWEET TOUCH: raw range %ux%u, %u fraction bits\n", st.rx, st.ry, st.fbits);
+ 	if (!enabled) {
+ 		printf("SWEET TOUCH: disabled (sweettouch=0)\n");
+ 		return;

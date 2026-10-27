@@ -2,6 +2,14 @@
 
 ## Sapphiren touch status — 2026-10-27
 
+- Patch `0953-sapphiren-touch-range.patch` adapts ios-sapphire 0140 to our
+  trace and empty-report parser. It adds configurable 2/4-bit FocalTech
+  fractions and raw ranges, clamps mapped coordinates, and logs initial raw
+  contacts. Offline patch application against the exact XNU source in CI
+  buildtree `40480884708` produced a byte-identical result. Sapphire's
+  measured settings are `sweettouch_rx=8640 sweettouch_ry=9600` with default
+  `sweettouch_fbits=2`; still needs a kernel build and a later phone test
+  when user permits. Existing boot args retain topaz defaults.
 - GPU/4K integration source stage: `userland/sapphire-gpu/` holds the
   ios-sapphire `344a8af` Mesa/EAGL/AIR/Metal source, adapted to look for our
   `RedwoodGPU` service. `xnu/patches/0952-sapphiren-silver-cpufreq.patch`
